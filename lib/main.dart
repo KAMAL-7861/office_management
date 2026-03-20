@@ -45,8 +45,9 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Office Management System',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
+        theme: AppTheme.darkTheme,
         darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.dark,
         onGenerateRoute: AppRouter.onGenerateRoute,
         initialRoute: '/',
       ),

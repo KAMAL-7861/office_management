@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../auth/domain/usecases/auth_usecases.dart';
 import 'admin_employee_detail_screen.dart';
@@ -31,126 +32,170 @@ class _AdminEmployeesScreenState extends State<AdminEmployeesScreen> {
     });
   }
 
+  Color _statusColor(UserStatus status) {
+    switch (status) {
+      case UserStatus.active:
+        return AppColors.statusApproved;
+      case UserStatus.pending:
+        return AppColors.statusPending;
+      default:
+        return AppColors.statusRejected;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Employees'),
+      backgroundColor: const Color(0xFF050807),
+      appBar: themedAppBar(
+        title: 'Employees',
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.teal),
             onPressed: _fetchEmployees,
           ),
         ],
       ),
-      body: FutureBuilder<List<UserEntity>>(
-        future: _employeesFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No employees found.'));
-          }
+      body: AppBackground(
+        child: FutureBuilder<List<UserEntity>>(
+          future: _employeesFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                  child: CircularProgressIndicator(color: AppColors.teal));
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Error: ${snapshot.error}',
+                  style: const TextStyle(color: AppColors.subtitleGrey),
+                ),
+              );
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.people_outline,
+                        size: 60,
+                        color: AppColors.labelGrey.withOpacity(0.4)),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'No employees found.',
+                      style: TextStyle(
+                          color: AppColors.subtitleGrey, fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-          final employees = snapshot.data!;
-          return ListView.builder(
-            itemCount: employees.length,
-            padding: const EdgeInsets.all(16),
-            itemBuilder: (context, index) {
-              final employee = employees[index];
-              return Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Text(employee.name[0].toUpperCase()),
-                  ),
-                  title: Text(employee.name),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Role: ${employee.role.name} | Dept: ${employee.department}'),
-                      Row(
+            final employees = snapshot.data!;
+            return ListView.builder(
+              itemCount: employees.length,
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+              itemBuilder: (context, index) {
+                final employee = employees[index];
+                final statusColor = _statusColor(employee.status);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GlassCard(
+                    padding: EdgeInsets.zero,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.white.withOpacity(0.08),
+                        child: Text(
+                          employee.name[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        employee.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Status: '),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: employee.status == UserStatus.active
-                                  ? Colors.green.withOpacity(0.1)
-                                  : employee.status == UserStatus.pending
-                                      ? Colors.orange.withOpacity(0.1)
-                                      : Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${employee.role.name[0].toUpperCase()}${employee.role.name.substring(1)}  ·  ${employee.department}',
+                            style: const TextStyle(
+                                color: AppColors.subtitleGrey, fontSize: 12),
+                          ),
+                          const SizedBox(height: 6),
+                          statusChip(
+                              employee.status.name.toUpperCase(), statusColor),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (employee.status == UserStatus.pending)
+                            IconButton(
+                              icon: const Icon(Icons.check_circle_outline,
+                                  color: AppColors.statusApproved),
+                              tooltip: 'Approve',
+                              onPressed: () async {
+                                final result = await sl<
+                                        ApproveEmployeeUseCase>()
+                                    .call(employee.id);
+                                result.fold(
+                                  (failure) =>
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(SnackBar(
+                                              content: Text(
+                                                  'Error: ${failure.message}'))),
+                                  (_) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content:
+                                              Text('Employee approved')),
+                                    );
+                                    _fetchEmployees();
+                                  },
+                                );
+                              },
                             ),
-                            child: Text(
-                              employee.status.name.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: employee.status == UserStatus.active
-                                    ? Colors.green
-                                    : employee.status == UserStatus.pending
-                                        ? Colors.orange
-                                        : Colors.red,
+                          IconButton(
+                            icon: const Icon(Icons.info_outline,
+                                color: AppColors.teal),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AdminEmployeeDetailScreen(
+                                    employee: employee),
                               ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline,
+                                color: AppColors.statusRejected),
+                            tooltip: 'Delete/Reject',
+                            onPressed: () =>
+                                ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'Delete functionality coming soon')),
                             ),
                           ),
                         ],
                       ),
-                    ],
+                      isThreeLine: true,
+                    ),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (employee.status == UserStatus.pending)
-                        IconButton(
-                          icon: const Icon(Icons.check_circle_outline, color: Colors.green),
-                          tooltip: 'Approve',
-                          onPressed: () async {
-                            final result = await sl<ApproveEmployeeUseCase>().call(employee.id);
-                            result.fold(
-                              (failure) => ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error: ${failure.message}')),
-                              ),
-                              (_) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Employee approved')),
-                                );
-                                _fetchEmployees();
-                              },
-                            );
-                          },
-                        ),
-                      IconButton(
-                        icon: const Icon(Icons.info_outline),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  AdminEmployeeDetailScreen(employee: employee),
-                            ),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
-                        tooltip: 'Delete/Reject',
-                        onPressed: () {
-                          // TODO: Implement delete/deactivate usecase
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Delete functionality coming soon')),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

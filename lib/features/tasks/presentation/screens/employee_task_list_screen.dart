@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/task_entity.dart';
@@ -33,30 +34,30 @@ class _EmployeeTaskListScreenState extends State<EmployeeTaskListScreen> {
   Color _statusColor(TaskStatus status) {
     switch (status) {
       case TaskStatus.pending:
-        return Colors.orange;
+        return AppColors.statusPending;
       case TaskStatus.inProgress:
-        return Colors.blue;
+        return AppColors.statusInProgress;
       case TaskStatus.submitted:
-        return Colors.purple;
+        return AppColors.statusSubmitted;
       case TaskStatus.approved:
-        return Colors.green;
+        return AppColors.statusApproved;
       case TaskStatus.rejected:
-        return Colors.red;
+        return AppColors.statusRejected;
     }
   }
 
   IconData _statusIcon(TaskStatus status) {
     switch (status) {
       case TaskStatus.pending:
-        return Icons.hourglass_empty;
+        return Icons.hourglass_empty_rounded;
       case TaskStatus.inProgress:
-        return Icons.play_circle_outline;
+        return Icons.play_circle_outline_rounded;
       case TaskStatus.submitted:
-        return Icons.upload_file;
+        return Icons.upload_file_outlined;
       case TaskStatus.approved:
-        return Icons.check_circle;
+        return Icons.check_circle_outline_rounded;
       case TaskStatus.rejected:
-        return Icons.cancel;
+        return Icons.cancel_outlined;
     }
   }
 
@@ -86,45 +87,50 @@ class _EmployeeTaskListScreenState extends State<EmployeeTaskListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildInfoRow(
-                  'Assigned By',
-                  task.assignedByName ?? 'Unknown',
-                ),
-                const SizedBox(height: 8),
-                _buildInfoRow('Status', _statusLabel(task.status)),
-                const SizedBox(height: 8),
-                _buildInfoRow(
-                  'Created',
-                  task.createdAt.toLocal().toString().split('.')[0],
-                ),
-                const SizedBox(height: 12),
+                _infoRow('Assigned By', task.assignedByName ?? 'Unknown'),
+                const SizedBox(height: 10),
+                _infoRow('Status', _statusLabel(task.status)),
+                const SizedBox(height: 10),
+                _infoRow('Created',
+                    task.createdAt.toLocal().toString().split('.')[0]),
+                const SizedBox(height: 14),
                 const Text(
                   'Description:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: AppColors.teal,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13),
                 ),
-                const SizedBox(height: 4),
-                Text(task.description),
+                const SizedBox(height: 6),
+                Text(task.description,
+                    style: const TextStyle(color: AppColors.subtitleGrey)),
                 if (task.feedback != null && task.feedback!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Card(
-                    color: task.status == TaskStatus.approved
-                        ? Colors.green.shade50
-                        : task.status == TaskStatus.rejected
-                            ? Colors.red.shade50
-                            : Colors.grey.shade100,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Manager Feedback:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(task.feedback!),
-                        ],
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _statusColor(task.status).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _statusColor(task.status).withOpacity(0.3),
                       ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Manager Feedback:',
+                          style: TextStyle(
+                            color: _statusColor(task.status),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(task.feedback!,
+                            style: const TextStyle(
+                                color: AppColors.subtitleGrey)),
+                      ],
                     ),
                   ),
                 ],
@@ -137,38 +143,36 @@ class _EmployeeTaskListScreenState extends State<EmployeeTaskListScreen> {
                 onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Close'),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  context.read<TaskBloc>().add(
-                        UpdateTaskStatusRequested(
-                          task.id,
-                          TaskStatus.inProgress,
-                        ),
-                      );
+              TealButton(
+                label: 'Start Working',
+                height: 40,
+                onTap: () {
+                  context.read<TaskBloc>().add(UpdateTaskStatusRequested(
+                        task.id,
+                        TaskStatus.inProgress,
+                      ));
                   Navigator.pop(dialogContext);
-                  // Small delay to let the update happen
-                  Future.delayed(const Duration(milliseconds: 500), _loadTasks);
+                  Future.delayed(
+                      const Duration(milliseconds: 500), _loadTasks);
                 },
-                child: const Text('Start Working'),
               ),
             ] else if (task.status == TaskStatus.inProgress) ...[
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Close'),
               ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  context.read<TaskBloc>().add(
-                        UpdateTaskStatusRequested(
-                          task.id,
-                          TaskStatus.submitted,
-                        ),
-                      );
+              TealButton(
+                label: 'Submit Task',
+                height: 40,
+                onTap: () {
+                  context.read<TaskBloc>().add(UpdateTaskStatusRequested(
+                        task.id,
+                        TaskStatus.submitted,
+                      ));
                   Navigator.pop(dialogContext);
-                  Future.delayed(const Duration(milliseconds: 500), _loadTasks);
+                  Future.delayed(
+                      const Duration(milliseconds: 500), _loadTasks);
                 },
-                icon: const Icon(Icons.check),
-                label: const Text('Submit Task'),
               ),
             ] else
               TextButton(
@@ -181,136 +185,19 @@ class _EmployeeTaskListScreenState extends State<EmployeeTaskListScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _infoRow(String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '$label: ',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        Expanded(child: Text(value)),
+        Text('$label: ',
+            style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 13)),
+        Expanded(
+            child: Text(value,
+                style: const TextStyle(color: AppColors.subtitleGrey))),
       ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Tasks'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadTasks,
-          ),
-        ],
-      ),
-      body: BlocBuilder<TaskBloc, TaskState>(
-        builder: (context, state) {
-          if (state is TaskLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is TaskError) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.error_outline,
-                      size: 48, color: Colors.red.shade300),
-                  const SizedBox(height: 16),
-                  Text('Error: ${state.message}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadTasks,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          } else if (state is TasksLoaded) {
-            if (state.tasks.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.assignment_outlined,
-                        size: 64, color: Colors.grey.shade400),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No tasks assigned to you',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Tasks assigned by your manager will appear here',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.tasks.length,
-              itemBuilder: (context, index) {
-                final task = state.tasks[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          _statusColor(task.status).withOpacity(0.2),
-                      child: Icon(
-                        _statusIcon(task.status),
-                        color: _statusColor(task.status),
-                      ),
-                    ),
-                    title: Text(
-                      task.title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 4),
-                        Text(
-                          'From: ${task.assignedByName ?? "Unknown"}',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _statusColor(task.status).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _statusColor(task.status).withOpacity(0.5),
-                            ),
-                          ),
-                          child: Text(
-                            _statusLabel(task.status),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _statusColor(task.status),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: _getTrailingAction(task),
-                    onTap: () => _showTaskDetailDialog(task),
-                    isThreeLine: true,
-                  ),
-                );
-              },
-            );
-          }
-          return const Center(child: Text('Tap refresh to load tasks'));
-        },
-      ),
     );
   }
 
@@ -318,15 +205,140 @@ class _EmployeeTaskListScreenState extends State<EmployeeTaskListScreen> {
     if (task.status == TaskStatus.pending) {
       return const Tooltip(
         message: 'Tap to start',
-        child: Icon(Icons.play_arrow, color: Colors.blue),
+        child:
+            Icon(Icons.play_arrow_rounded, color: AppColors.statusInProgress),
       );
     } else if (task.status == TaskStatus.inProgress) {
       return const Tooltip(
         message: 'Tap to submit',
-        child: Icon(Icons.upload, color: Colors.purple),
+        child: Icon(Icons.upload_rounded, color: AppColors.statusSubmitted),
       );
-    } else {
-      return const Icon(Icons.chevron_right);
     }
+    return const Icon(Icons.chevron_right, color: AppColors.labelGrey);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF050807),
+      appBar: themedAppBar(
+        title: 'My Tasks',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.teal),
+            onPressed: _loadTasks,
+          ),
+        ],
+      ),
+      body: AppBackground(
+        child: BlocBuilder<TaskBloc, TaskState>(
+          builder: (context, state) {
+            if (state is TaskLoading) {
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.teal),
+              );
+            } else if (state is TaskError) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 48, color: AppColors.statusRejected),
+                    const SizedBox(height: 16),
+                    Text('Error: ${state.message}',
+                        style:
+                            const TextStyle(color: AppColors.subtitleGrey)),
+                    const SizedBox(height: 16),
+                    TealButton(
+                        label: 'Retry', onTap: _loadTasks, height: 48),
+                  ],
+                ),
+              );
+            } else if (state is TasksLoaded) {
+              if (state.tasks.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.assignment_outlined,
+                          size: 64,
+                          color: AppColors.labelGrey.withOpacity(0.4)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No tasks assigned to you',
+                        style: TextStyle(
+                            fontSize: 18, color: AppColors.subtitleGrey),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Tasks assigned by your manager will appear here',
+                        style: TextStyle(
+                            color: AppColors.labelGrey, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+                itemCount: state.tasks.length,
+                itemBuilder: (context, index) {
+                  final task = state.tasks[index];
+                  final color = _statusColor(task.status);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: GlassCard(
+                      padding: EdgeInsets.zero,
+                      child: ListTile(
+                        leading: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.12),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(_statusIcon(task.status),
+                              color: Colors.white, size: 20),
+                        ),
+                        title: Text(
+                          task.title,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              'From: ${task.assignedByName ?? "Unknown"}',
+                              style: const TextStyle(
+                                  color: AppColors.subtitleGrey,
+                                  fontSize: 12),
+                            ),
+                            const SizedBox(height: 6),
+                            statusChip(_statusLabel(task.status), color),
+                          ],
+                        ),
+                        trailing: _getTrailingAction(task),
+                        onTap: () => _showTaskDetailDialog(task),
+                        isThreeLine: true,
+                      ),
+                    ),
+                  );
+                },
+              );
+            }
+            return const Center(
+                child: Text('Tap refresh to load tasks',
+                    style: TextStyle(color: AppColors.subtitleGrey)));
+          },
+        ),
+      ),
+    );
   }
 }
